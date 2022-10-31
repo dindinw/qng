@@ -77,7 +77,12 @@ func trackHeapSize(heapLimit uint64, dumpFolder string) {
 
 func dumpHeapProfile(heapLimit uint64, dumpFolder string, memStats *runtime.MemStats) {
 	heapFile := filepath.Join(dumpFolder, heapDumpFileName)
-	log.Info(fmt.Sprintf("Saving heap statistics into %s (HeapAlloc=%d > %d=heapLimit)", heapFile, memStats.HeapAlloc, heapLimit))
+	log.Info(fmt.Sprintf("Saving heap statistics into %s (HeapAlloc=%d > %d=heapLimit) (HeapObjects=%d, HeapSys=%d) (Sys=%d) (NumGC=%d)", heapFile,
+		memStats.HeapAlloc, heapLimit,
+		memStats.HeapObjects,
+		memStats.HeapSys,
+		memStats.Sys,
+		memStats.NumGC))
 	f, err := os.Create(heapFile)
 	defer f.Close()
 	if err != nil {
