@@ -220,3 +220,29 @@ func (api *PrivateP2PAPI) ResetPeers() (interface{}, error) {
 	}
 	return trynum, nil
 }
+
+func (api *PrivateP2PAPI) ResetPeers2() (interface{}, error) {
+	for _, pe := range api.s.Peers().AllPeers() {
+		if !pe.IsActive() {
+			continue
+		}
+		api.s.PeerSync().TryDisconnect(pe)
+	}
+	<-time.After(time.Second)
+	trynum := 0
+	for _, pe := range api.s.Peers().AllPeers() {
+		qa := pe.QAddress()
+		if qa == nil {
+			continue
+		}
+		if pe.ConnectionState().IsDisconnected() {
+			err := api.s.ConnectToPeer(qa.String(), true)
+			if err != nil {
+				log.Error(err.Error())
+			} else {
+				trynum++
+			}
+		}
+	}
+	return trynum, nil
+}
