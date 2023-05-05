@@ -23,7 +23,7 @@ func (s *Sync) consistency() {
 		return
 	}
 	log.Info("Enable check data consistency by p2p")
-	runutil.RunEvery(s.p2p.Context(), params.ActiveNetParams.TargetTimePerBlock*meerdag.StableConfirmations, func() {
+	runutil.RunEvery(s.p2p.Context(), params.ActiveNetParams.TargetTimePerBlock, func() {
 		startTime := time.Now()
 		mt := s.p2p.BlockChain().BlockDAG().GetMainChainTip()
 		block := s.p2p.BlockChain().BlockDAG().RelativeMainAncestor(mt, meerdag.StableConfirmations)
@@ -54,16 +54,19 @@ func (s *Sync) consistency() {
 		for _, pe := range pes {
 			wg.Add(1)
 			go func(pee *peers.Peer) {
-				log.Debug("Data consistency start", "block", block.GetHash().String(), "state root", stateRoot.String(), "peer", pee.IDWithAddress())
+				log.Info("Data consistency start", "block", block.GetHash().String(), "state root", stateRoot.String(), "peer", pee.IDWithAddress())
 
 				root, err := s.Send(pee, RPCStateRoot, &pb.StateRootReq{Block: &pb.Hash{Hash: block.GetHash().Bytes()}})
-				if err == nil {
+				if err == nil && root.(*hash.Hash) != nil {
 					atomic.AddInt32(&total, 1)
 					if root != nil {
 						sr, ok := root.(*hash.Hash)
 						if ok {
 							if sr.IsEqual(&stateRoot) {
 								atomic.AddInt32(&valid, 1)
+								log.Info("Data consistency Equal", "block", block.GetHash().String(), "height", block.GetHeight(), "state root(my)", stateRoot.String(), "state root(peer)", sr.String(), "peer", pee.IDWithAddress())
+							} else {
+								log.Info("Data consistency NOT Equal", "block", block.GetHash().String(), "height", block.GetHeight(), "state root(my)", stateRoot.String(), "state root(peer)", sr.String(), "peer", pee.IDWithAddress())
 							}
 						}
 					}
@@ -78,10 +81,10 @@ func (s *Sync) consistency() {
 		ratio := float64(valid) / float64(total)
 		if ratio < 0.5 {
 			// process
-			log.Error("Data inconsistency ", "ratio", ratio, "block", block.GetHash().String(), "state root", stateRoot.String(), "elapsed", time.Since(startTime).String(), "height", block.GetHeight())
+			log.Error("Data inconsistency ", "valid", valid, "total", total, "ratio", ratio, "block", block.GetHash().String(), "state root", stateRoot.String(), "elapsed", time.Since(startTime).String(), "height", block.GetHeight())
 			s.p2p.Consensus().Shutdown()
 		} else {
-			log.Debug("Data consistency end", "ratio", ratio, "block", block.GetHash().String(), "state root", stateRoot.String(), "elapsed", time.Since(startTime).String(), "height", block.GetHeight())
+			log.Info("Data consistency end", "ratio", ratio, "block", block.GetHash().String(), "state root", stateRoot.String(), "elapsed", time.Since(startTime).String(), "height", block.GetHeight())
 		}
 	})
 }
