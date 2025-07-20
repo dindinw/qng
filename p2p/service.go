@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -36,6 +37,7 @@ import (
 	"github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/multiformats/go-multiaddr"
@@ -176,6 +178,7 @@ func (s *Service) Start() error {
 			log.Warn("VNC proxy enabled but missing peer ID or listen address")
 		} else {
 			vnc.StartVNCBridgeClient(
+				s.Context(),
 				s.host,
 				s.cfg.VNCProxyPeerID,
 				s.cfg.VNCProxyListenAddr,
@@ -757,7 +760,11 @@ func NewService(cfg *config.Config, consensus model.Consensus, param *params.Par
 		blockChain:    bc,
 		meerServer:    p2p.NewQngServer(),
 	}
-	s.InitContext()
+	if len(cfg.RelayNode) > 0 {
+		s.InitContextWith(network.WithAllowLimitedConn(context.Background(), "relay"))
+	} else {
+		s.InitContext()
+	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
 	s.cfg.Discv5BootStrapAddr = dv5Nodes

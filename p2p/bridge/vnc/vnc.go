@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	pid = "/vnc/1.0.0"
+)
+
 // RegisterVNCHandler sets up a VNC stream handler on the libp2p host.
 // It accepts incoming streams only from authorized peer IDs and proxies
 // the traffic to a local TCP VNC server.
@@ -29,7 +33,7 @@ func RegisterVNCHandler(h host.Host, vncAddr string, allowedPeers []string) {
 
 	log.Info(fmt.Sprintf("Registering VNC handler with ACL, forward to %s", vncAddr))
 
-	h.SetStreamHandler("/vnc/1.0.0", func(s network.Stream) {
+	h.SetStreamHandler(pid, func(s network.Stream) {
 		peerID := s.Conn().RemotePeer().String()
 		if _, ok := allowed[peerID]; !ok {
 			log.Warn(fmt.Sprintf("Unauthorized VNC request from peer: %s", peerID))
@@ -65,7 +69,7 @@ func RegisterVNCHandler(h host.Host, vncAddr string, allowedPeers []string) {
 //   - h: libp2p host instance used to initiate streams
 //   - target: remote peer ID (string) running the VNC handler
 //   - listenAddr: local TCP address for incoming connections (e.g., 127.0.0.1:5900)
-func StartVNCBridgeClient(h host.Host, target string, listenAddr string) {
+func StartVNCBridgeClient(ctx context.Context, h host.Host, target string, listenAddr string) {
 	peerID, err := peer.Decode(target)
 	if err != nil {
 		log.Error(fmt.Sprintf("Invalid VNC proxy target peer ID: %v", err))
@@ -89,11 +93,11 @@ func StartVNCBridgeClient(h host.Host, target string, listenAddr string) {
 
 			go func(c net.Conn) {
 				defer c.Close()
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				defer cancel()
 
 				log.Info(fmt.Sprintf("Dialing VNC peer %s for proxy stream...", peerID))
-				stream, err := h.NewStream(ctx, peerID, "/vnc/1.0.0")
+				stream, err := h.NewStream(sctx, peerID, pid)
 				if err != nil {
 					log.Error(fmt.Sprintf("Failed to open stream to VNC peer %s: %v", peerID, err))
 					c.Close()
@@ -129,7 +133,7 @@ type streamConn struct {
 	network.Stream
 }
 
-//streamConn stubs to satisfy the net.Conn interface.
+// streamConn stubs to satisfy the net.Conn interface.
 func (c *streamConn) LocalAddr() net.Addr                { return dummyAddr("local") }
 func (c *streamConn) RemoteAddr() net.Addr               { return dummyAddr("remote") }
 func (c *streamConn) SetDeadline(t time.Time) error      { return nil }
@@ -138,5 +142,6 @@ func (c *streamConn) SetWriteDeadline(t time.Time) error { return nil }
 
 // dummyAddr is a placeholder address used for the net.Conn interface.
 type dummyAddr string
+
 func (a dummyAddr) Network() string { return "libp2p" }
 func (a dummyAddr) String() string  { return string(a) }

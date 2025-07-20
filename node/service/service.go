@@ -82,6 +82,12 @@ func (s *Service) InitContext() {
 	}
 }
 
+func (s *Service) InitContextWith(parent context.Context) {
+	if s.ctx == nil {
+		s.ctx, s.cancel = context.WithCancel(parent)
+	}
+}
+
 func (s *Service) Services() *ServiceRegistry {
 	return s.services
 }
