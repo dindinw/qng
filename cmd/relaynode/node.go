@@ -196,7 +196,12 @@ func (node *Node) startP2P() error {
 		return err
 	}
 	if node.cfg.EnableRelay {
-		_, err = relay.New(node.host)
+		if node.cfg.UnlimitedRelay {
+			_, err = relay.New(node.host, relay.WithInfiniteLimits())
+			log.Info("Relay disables limits.")
+		} else {
+			_, err = relay.New(node.host)
+		}
 		if err != nil {
 			log.Error(err.Error())
 			return err

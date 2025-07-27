@@ -207,6 +207,14 @@ var (
 		Destination: &Conf.EnableRelay,
 	}
 
+	UnlimitedRelay = &cli.BoolFlag{
+		Name:        "unlimitedrelay",
+		Aliases:     []string{"ur"},
+		Usage:       "Enable relay service for node by infinite limits",
+		Value:       false,
+		Destination: &Conf.UnlimitedRelay,
+	}
+
 	MaxPeers = &cli.IntFlag{
 		Name:        "maxpeers",
 		Aliases:     []string{"mp"},
@@ -238,6 +246,7 @@ var (
 		RPCMaxClients,
 		DisableTLS,
 		EnableRelay,
+		UnlimitedRelay,
 		MaxPeers,
 	}
 )
@@ -257,16 +266,17 @@ type Config struct {
 	DebugLevel        string
 	DebugPrintOrigins bool
 
-	DisableRPC    bool
-	RPCListeners  cli.StringSlice
-	RPCUser       string
-	RPCPass       string
-	RPCCert       string
-	RPCKey        string
-	RPCMaxClients int
-	DisableTLS    bool
-	EnableRelay   bool
-	MaxPeers      int
+	DisableRPC     bool
+	RPCListeners   cli.StringSlice
+	RPCUser        string
+	RPCPass        string
+	RPCCert        string
+	RPCKey         string
+	RPCMaxClients  int
+	DisableTLS     bool
+	EnableRelay    bool
+	UnlimitedRelay bool
+	MaxPeers       int
 }
 
 func (c *Config) Load() error {
